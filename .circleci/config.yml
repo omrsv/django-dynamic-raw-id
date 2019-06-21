@@ -1,15 +1,43 @@
-# Use the latest 2.1 version of CircleCI pipeline processing engine, see https://circleci.com/docs/2.0/configuration-reference/
-version: 2.1
+version: 2
 
-# Use a package of configuration called an orb, see https://circleci.com/docs/2.0/orb-intro/
-orbs:
-  # Declare a dependency on the welcome-orb
-  welcome: circleci/welcome-orb@0.3.1
+jobs:
+  build:
 
-# Orchestrate or schedule a set of jobs, see https://circleci.com/docs/2.0/workflows/
-workflows:
-  # Name the workflow "Welcome"
-  Welcome:
-    # Run the welcome/run job in its own container
-    jobs:
-      - welcome/run
+    docker:
+      - image: circleci/python:3.7-stretch-browsers # Comes with gtk for Selenium
+
+    environment:
+      DJANGO_SETTINGS_MODULE: dynamic_raw_id.tests.testapp.settings
+      PYTHONUSERBASE: /home/circleci/.local
+      MOZ_HEADLESS: 1
+
+    steps:
+
+      - run:
+          name: Make PATH available to all steps.
+          command: |
+            echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
+
+      - checkout
+
+      - restore_cache:
+          keys:
+            - pip-cache
+
+      - run:
+          name: Install pip dependencies
+          command: |
+            set -eo pipefail
+            pip install -U pip
+            pip install --user tox coverage codacy-coverage
+
+      - save_cache:
+          key: pip-cache
+          paths:
+            - ~/.cache/pip
+
+      - run:
+          name: Tox
+          command: |
+            set -eo pipefail
+            tox
