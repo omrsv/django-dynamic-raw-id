@@ -1,11 +1,11 @@
 from __future__ import unicode_literals
 
 import time
+from logging import getLogger
 
 from django.contrib.auth.models import User
 from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.urls import reverse
-from logging import getLogger
 
 from dynamic_raw_id.tests.testapp.models import (
     CharPrimaryKeyModel,
@@ -18,7 +18,6 @@ logger = getLogger(__file__)
 
 def get_webdriver():
     from selenium.webdriver.firefox.webdriver import WebDriver
-
     return WebDriver()
 
 

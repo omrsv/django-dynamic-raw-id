@@ -4,37 +4,57 @@ jobs:
   build:
 
     docker:
-      - image: circleci/python:3.7-stretch-browsers # Comes with gtk for Selenium
+      - image: circleci/python:3.6-stretch-browsers # Comes with gtk for Selenium
 
     environment:
       DJANGO_SETTINGS_MODULE: dynamic_raw_id.tests.testapp.settings
       PYTHONUSERBASE: /home/circleci/.local
+      DOWNLOADS: /home/circleci/.downloads
+      GECKODRIVER_VERSION: 0.24.0
+      FIREFOX_VERSION: 67.0.2
       MOZ_HEADLESS: 1
 
     steps:
+      - restore_cache:
+          keys:
+            - download-caches
+
+      - checkout
 
       - run:
           name: Make PATH available to all steps.
           command: |
             echo 'export PATH=~/.local/bin:$PATH' >> $BASH_ENV
 
-      - checkout
+      - run:
+          name: Update to latest Firefox/Geckodriver packages
+          command: |
+            mkdir -p ${DOWNLOADS}
+            sudo mkdir -p /opt/geckodriver /opt/firefox
 
-      - restore_cache:
-          keys:
-            - pip-cache
+            curl -L  -o "${DOWNLOADS}/firefox.tar.bz2" "https://download-installer.cdn.mozilla.net/pub/firefox/releases/${FIREFOX_VERSION}/linux-x86_64/en-US/firefox-${FIREFOX_VERSION}.tar.bz2"
+            sudo tar -jxf ${DOWNLOADS}/firefox.tar.bz2 -C /opt/
+            sudo ln -sf /opt/firefox/firefox /usr/bin/firefox
+            firefox --version --headless
+
+            curl -L  -o "${DOWNLOADS}/geckodriver.tar.gz" "https://github.com/mozilla/geckodriver/releases/download/v${GECKODRIVER_VERSION}/geckodriver-v${GECKODRIVER_VERSION}-linux64.tar.gz"
+            sudo tar -xzf ${DOWNLOADS}/geckodriver.tar.gz -C /opt/geckodriver
+            sudo ln -sf /opt/geckodriver/geckodriver /usr/bin/geckodriver
+            geckodriver --version
 
       - run:
           name: Install pip dependencies
           command: |
             set -eo pipefail
+
             pip install -U pip
             pip install --user tox coverage codacy-coverage
 
       - save_cache:
-          key: pip-cache
+          key: download-caches
           paths:
             - ~/.cache/pip
+            - ~/.downloads
 
       - run:
           name: Tox
